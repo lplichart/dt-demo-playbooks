@@ -1,4 +1,11 @@
 ---
+- name: Install required collections
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Install kubernetes.core
+      command: ansible-galaxy collection install kubernetes.core
+
 - name: Remediate EasyTrade service
   hosts: localhost
   connection: local
