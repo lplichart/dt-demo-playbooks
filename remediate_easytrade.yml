@@ -12,46 +12,14 @@
       debug:
         msg: "Starting remediation of {{ deployment_name }} in {{ target_namespace }}"
 
-    - name: Rollout restart via Kubernetes Python client
-      command: >-
-        python3 -c "
-        import subprocess, sys, datetime
-        subprocess.run([sys.executable, '-m', 'pip', 'install', 'kubernetes', '-q'], check=True)
-        from kubernetes import client, config
-        try:
-            config.load_kube_config()
-        except Exception:
-            config.load_incluster_config()
-        apps = client.AppsV1Api()
-        patch = {'spec': {'template': {'metadata': {'annotations': {'kubectl.kubernetes.io/restartedAt': datetime.datetime.utcnow().isoformat() + 'Z'}}}}}
-        apps.patch_namespaced_deployment('{{ deployment_name }}', '{{ target_namespace }}', patch)
-        print('Restart triggered successfully')
-        "
+    - name: Rollout restart and wait
+      command: python3 {{ playbook_dir }}/remediate.py --deployment {{ deployment_name }} --namespace {{ target_namespace }}
+      register: result
 
-    - name: Wait for rollout to complete
-      command: >-
-        python3 -c "
-        import time
-        from kubernetes import client, config
-        try:
-            config.load_kube_config()
-        except Exception:
-            config.load_incluster_config()
-        apps = client.AppsV1Api()
-        for i in range(24):
-            d = apps.read_namespaced_deployment('{{ deployment_name }}', '{{ target_namespace }}')
-            desired = d.spec.replicas or 1
-            ready = d.status.ready_replicas or 0
-            updated = d.status.updated_replicas or 0
-            print(f'Attempt {i+1}: desired={desired} updated={updated} ready={ready}')
-            if updated == desired and ready == desired:
-                print('Rollout complete')
-                exit(0)
-            time.sleep(5)
-        print('Timeout waiting for rollout')
-        exit(1)
-        "
+    - name: Show output
+      debug:
+        msg: "{{ result.stdout_lines }}"
 
     - name: Log remediation complete
       debug:
-        msg: "Remediation of {{ deployment_name }} complete — deployment is available"
+        msg: "Remediation of {{ deployment_name }} complete"
