@@ -1,11 +1,4 @@
 ---
-- name: Install required collections
-  hosts: localhost
-  gather_facts: false
-  tasks:
-    - name: Install kubernetes.core
-      command: ansible-galaxy collection install kubernetes.core
-
 - name: Remediate EasyTrade service
   hosts: localhost
   connection: local
@@ -13,29 +6,19 @@
   vars:
     target_namespace: easytrade
     deployment_name: "{{ deployment | default('broker') }}"
-
+ 
   tasks:
     - name: Log remediation start
       debug:
         msg: "Starting remediation of {{ deployment_name }} in {{ target_namespace }}"
-
+ 
     - name: Rollout restart the affected deployment
-      kubernetes.core.k8s_rollout_restart:
-        kind: Deployment
-        name: "{{ deployment_name }}"
-        namespace: "{{ target_namespace }}"
-
+      command: kubectl rollout restart deployment/{{ deployment_name }} -n {{ target_namespace }}
+ 
     - name: Wait for rollout to complete
-      kubernetes.core.k8s_info:
-        kind: Deployment
-        name: "{{ deployment_name }}"
-        namespace: "{{ target_namespace }}"
-        wait: yes
-        wait_condition:
-          type: Available
-          status: "True"
-        wait_timeout: 120
-
+      command: kubectl rollout status deployment/{{ deployment_name }} -n {{ target_namespace }} --timeout=120s
+ 
     - name: Log remediation complete
       debug:
         msg: "Remediation of {{ deployment_name }} complete — deployment is available"
+ 
