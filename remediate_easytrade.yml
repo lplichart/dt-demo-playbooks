@@ -6,19 +6,29 @@
   vars:
     target_namespace: easytrade
     deployment_name: "{{ deployment | default('broker') }}"
- 
+
   tasks:
     - name: Log remediation start
       debug:
         msg: "Starting remediation of {{ deployment_name }} in {{ target_namespace }}"
- 
+
     - name: Rollout restart the affected deployment
-      command: kubectl rollout restart deployment/{{ deployment_name }} -n {{ target_namespace }}
- 
+      kubernetes.core.k8s_rollout_restart:
+        kind: Deployment
+        name: "{{ deployment_name }}"
+        namespace: "{{ target_namespace }}"
+
     - name: Wait for rollout to complete
-      command: kubectl rollout status deployment/{{ deployment_name }} -n {{ target_namespace }} --timeout=120s
- 
+      kubernetes.core.k8s_info:
+        kind: Deployment
+        name: "{{ deployment_name }}"
+        namespace: "{{ target_namespace }}"
+        wait: yes
+        wait_condition:
+          type: Available
+          status: "True"
+        wait_timeout: 120
+
     - name: Log remediation complete
       debug:
         msg: "Remediation of {{ deployment_name }} complete — deployment is available"
- 
