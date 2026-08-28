@@ -19,6 +19,7 @@ args = parser.parse_args()
 host = os.environ.get("K8S_AUTH_HOST")
 api_key = os.environ.get("K8S_AUTH_API_KEY")
 verify_ssl = os.environ.get("K8S_AUTH_VERIFY_SSL", "true").lower() != "false"
+ssl_ca_cert = os.environ.get("K8S_AUTH_SSL_CA_CERT")  # path to CA cert file if set
 
 if not host or not api_key:
     print(f"ERROR: K8S_AUTH_HOST={host}, K8S_AUTH_API_KEY={'set' if api_key else 'MISSING'}")
@@ -28,6 +29,8 @@ configuration = client.Configuration()
 configuration.host = host
 configuration.api_key = {"authorization": f"Bearer {api_key}"}
 configuration.verify_ssl = verify_ssl
+if ssl_ca_cert:
+    configuration.ssl_ca_cert = ssl_ca_cert
 
 with client.ApiClient(configuration) as api_client:
     apps = client.AppsV1Api(api_client)
